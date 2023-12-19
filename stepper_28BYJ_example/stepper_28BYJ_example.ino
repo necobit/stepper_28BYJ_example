@@ -1,12 +1,16 @@
 //M5Stanp S3用
 int motorSpeed = 6000;  //モーター速度初期値
-int speedMin = 6000;  //モーター最低速度　数値が大きいと遅くなる
-int speedMax = 5000;  //モーター最高速度　数値が小さいと速くなる
-int interval = 2000;  //最高速を維持する時間（msec）
-int stopTime = 10;  //ターン時の待機時間
+int speedMin = 6000;    //モーター最低速度　数値が大きいと遅くなる
+int speedMax = 5000;    //モーター最高速度　数値が小さいと速くなる
+int stopTime = 10;      //ターン時の待機時間
 int nowTime;
 int dir = 1;
 int spd = 1;
+int counter;
+int endpoint;
+int steps = 4096;  //1回転のステップ数
+int end = 0;
+int angle = 45;  //回転させたい角度
 int lookup[8] = { B01000, B01100, B00100, B00110, B00010, B00011, B00001, B01001 };
 int pin_1n1 = 1;
 int pin_1n2 = 3;
@@ -18,6 +22,7 @@ void setup() {
   pinMode(pin_1n2, OUTPUT);
   pinMode(pin_1n3, OUTPUT);
   pinMode(pin_1n4, OUTPUT);
+  endpoint = map(steps, 0, steps, 0, 4096 * angle / 360);
 }
 
 void loop() {
@@ -30,6 +35,7 @@ void loop() {
       digitalWrite(pin_1n3, bitRead(lookup[i], 2));
       digitalWrite(pin_1n4, bitRead(lookup[i], 3));
       delayMicroseconds(motorSpeed);
+      counter++;
     }
   }
 
@@ -41,7 +47,15 @@ void loop() {
       digitalWrite(pin_1n3, bitRead(lookup[i], 2));
       digitalWrite(pin_1n4, bitRead(lookup[i], 3));
       delayMicroseconds(motorSpeed);
+      counter--;
     }
+  }
+
+  //指定された角度まで行ったら減速フラグを立てる
+  if (counter >= endpoint | counter <= -endpoint) {
+    counter = 0;
+    spd = 0;
+    end = 1;
   }
 
   //回転数を上げる
@@ -52,7 +66,8 @@ void loop() {
       spd = 0;
     }
   }
-  if (nowTime + interval < millis()) {
+
+  if (end) {
     // 回転数を下げる
     if (!spd) {
       motorSpeed = motorSpeed * 1.05;
@@ -62,6 +77,7 @@ void loop() {
         dir = !dir;
         delay(stopTime);
         nowTime = millis();
+        end = 0;
       }
     }
   }
